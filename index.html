@@ -1767,5 +1767,76 @@ document.getElementById('backToList').addEventListener('click', ()=>{
   document.getElementById('docListOverlay').classList.add('active');
 });
 </script>
+  <button id="micTriggerBtn" onclick="toggleMicWindow()" style="position: fixed; top: 15px; left: 15px; width: 40px; height: 40px; border-radius: 50%; background: #6e1319; border: 2px solid #c81f2b; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 9998; box-shadow: 0 0 8px rgba(200, 31, 43, 0.6); transition: all 0.2s;">
+    <div style="width: 14px; height: 14px; background: #ff3b3b; position: relative;">
+        <div style="content: ''; position: absolute; top: -3px; left: 2px; width: 10px; height: 20px; background: transparent; border-left: 2px dashed #ff3b3b; border-right: 2px dashed #ff3b3b;"></div>
+        <div style="content: ''; position: absolute; top: 2px; left: -3px; width: 20px; height: 10px; background: transparent; border-top: 2px dashed #ff3b3b; border-bottom: 2px dashed #ff3b3b;"></div>
+    </div>
+</button>
+
+<div id="micSystemWindow" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; background: #040508; border: 2px solid #c81f2b; z-index: 9999; font-family: monospace; box-shadow: 0 0 25px rgba(200,31,43,0.6);">
+    <div style="background: #6e1319; color: #e9ecef; padding: 6px 10px; font-size: 11px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #c81f2b;">
+        <span>SYSTEM MODULE: M.I.C. v0.1b</span>
+        <button onclick="toggleMicWindow()" style="background: transparent; border: none; color: #e9ecef; font-size: 16px; cursor: pointer; line-height: 1;">&times;</button>
+    </div>
+    
+    <div style="padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: #020203;">
+        <div style="width: 180px; height: 180px; background: #000; border: 1px solid #2a2f36; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            <img id="micMouthDisplay" src="assets/1000075321.png" style="width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated;">
+        </div>
+
+        <div id="micStatusBar" style="font-size: 10px; color: #ff3b3b; letter-spacing: 1px; font-weight: bold; text-shadow: 0 0 5px rgba(255,59,59,0.5);">STATUS: IDLE // MONITORING ACTIVE</div>
+
+        <div style="display: flex; gap: 5px; width: 100%;">
+            <button onclick="changeMicSpeechState(true)" style="flex: 1; background: #111; border: 1px solid #c81f2b; color: #c81f2b; padding: 6px; font-family: inherit; font-size: 10px; cursor: pointer; font-weight: bold;">ГОВОРИТЬ</button>
+            <button onclick="changeMicSpeechState(false)" style="flex: 1; background: #111; border: 1px solid #c81f2b; color: #c81f2b; padding: 6px; font-family: inherit; font-size: 10px; cursor: pointer; font-weight: bold;">СТОП</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let micAnimationTimer = null;
+    const micWindowEl = document.getElementById('micSystemWindow');
+    const micImgEl = document.getElementById('micMouthDisplay');
+    const micStatusEl = document.getElementById('micStatusBar');
+
+    const SRC_CLOSED = 'assets/1000075321.png';
+    const SRC_OPEN = 'assets/1000075322.png';
+
+    // Функция открытия/закрытия окна
+    function toggleMicWindow() {
+        if (micWindowEl.style.display === 'none') {
+            micWindowEl.style.display = 'block';
+        } else {
+            micWindowEl.style.display = 'none';
+            changeMicSpeechState(false); // Безопасно тушим анимацию при закрытии
+        }
+    }
+
+    // Раздельные функции управления анимацией
+    function changeMicSpeechState(isSpeaking) {
+        if (isSpeaking) {
+            if (micAnimationTimer !== null) return; // Уже запущено
+            micStatusEl.textContent = "STATUS: TRANSMITTING AUDIO...";
+            micStatusEl.style.color = "#5aa3f0"; // Меняем цвет статуса на синий при передаче
+            
+            micAnimationTimer = setInterval(() => {
+                if (micImgEl.src.includes(SRC_CLOSED)) {
+                    micImgEl.src = SRC_OPEN;
+                } else {
+                    micImgEl.src = SRC_CLOSED;
+                }
+            }, 70);
+        } else {
+            if (micAnimationTimer !== null) {
+                clearInterval(micAnimationTimer);
+                micAnimationTimer = null;
+            }
+            micImgEl.src = SRC_CLOSED; // Сброс строго на закрытый рот
+            micStatusEl.textContent = "STATUS: IDLE // MONITORING ACTIVE";
+            micStatusEl.style.color = "#ff3b3b";
+        }
+    }
+</script>
 </body>
 </html>
