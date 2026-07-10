@@ -1,0 +1,2000 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N.O.T.H.I.N.G. FOUNDATION — ACCESS TERMINAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0a0a08;
+    --void-deep:#050503;
+    --amber:#d4a847;
+    --amber-bright:#f0c968;
+    --amber-dim:#6a5a2a;
+    --danger:#b33a3a;
+    --danger-bright:#e05050;
+    --danger-dim:#5a2020;
+    --blue:#5a8aaa;
+    --blue-bright:#7fb0d0;
+    --blue-dim:#2a3f4a;
+    --grey:#8a8060;
+    --grey-dim:#3a3528;
+    --paper:#f0e8ce;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--void-deep);
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+    color:var(--amber);
+    overflow:hidden;
+  }
+  #stage{
+    position:relative;
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ---------- TV FRAME: bulge + curvature ---------- */
+  .tv-frame{
+    position:fixed;
+    inset:1.4vh 1.4vw;
+    border-radius:7% / 5%;
+    overflow:hidden;
+    background:var(--void-deep);
+    box-shadow:
+      inset 0 0 9vw rgba(0,0,0,0.6),
+      inset 0 0 2.5vw rgba(0,0,0,0.65),
+      0 0 40px rgba(0,0,0,0.9);
+    transform:perspective(1200px) scale(1);
+    animation:phosphorFlicker 4s infinite;
+  }
+  @keyframes phosphorFlicker{
+    0%,100%{ opacity:1; }
+    25%{ opacity:0.985; }
+    50%{ opacity:0.965; }
+    75%{ opacity:0.99; }
+  }
+  /* convex glass highlight = the "bulge" read */
+  .tv-frame::after{
+    content:"";
+    position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 70% 55% at 30% 22%, rgba(212,168,71,0.08), transparent 60%),
+      radial-gradient(ellipse 120% 90% at 50% 50%, transparent 62%, rgba(0,0,0,0.32) 100%);
+    pointer-events:none;
+    z-index:52;
+  }
+  /* rolling raster band, subtle, like an old set settling */
+  .tv-frame::before{
+    content:"";
+    position:absolute; left:0; right:0; top:0; height:14%;
+    background:linear-gradient(to bottom, rgba(255,255,255,0.025), transparent);
+    pointer-events:none;
+    z-index:53;
+    will-change:transform;
+    animation:roll 9s linear infinite;
+  }
+  @keyframes roll{
+    0%{ transform:translateY(-100%); }
+    100%{ transform:translateY(714%); }
+  }
+
+  /* ---------- CRT / scanline atmosphere ---------- */
+  .crt::before{
+    content:"";
+    position:fixed; inset:0;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.035) 0px,
+      rgba(255,255,255,0.035) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events:none;
+    z-index:95;
+  }
+  .crt::after{
+    content:"";
+    position:fixed; inset:0;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.4) 100%);
+    pointer-events:none;
+    z-index:96;
+    animation:flicker 6s infinite;
+  }
+  @keyframes flicker{
+    0%,93%,100%{ opacity:1; }
+    94%{ opacity:0.93; }
+    95%{ opacity:1; }
+    96%{ opacity:0.95; }
+    97%{ opacity:1; }
+  }
+  .noise{
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:94;
+    opacity:0.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:noise-shift 1.6s steps(2) infinite;
+  }
+  @keyframes noise-shift{
+    0%{transform:translate(0,0)}
+    50%{transform:translate(-2%,1%)}
+    100%{transform:translate(1%,-1%)}
+  }
+
+  .screen{
+    position:absolute; inset:0;
+    display:none;
+    flex-direction:column;
+    padding:6vh 6vw;
+  }
+  .screen.active{display:flex;}
+
+  /* ---------- BIOS SCREEN ---------- */
+  #bios, #drverify{ justify-content:flex-start; color:var(--grey); font-size:14px; line-height:1.65; }
+  #bios .head, #drverify .head{ color:var(--amber); font-weight:700; letter-spacing:1px; margin-bottom:2px; text-shadow:0 0 8px rgba(212,168,71,0.25);}
+  #bios .sub, #drverify .sub{ color:var(--amber-dim); margin-bottom:18px; font-size:12px;}
+  #bios-log, #drverify-log{
+    white-space:pre-wrap;
+    max-height:38vh; overflow-y:auto; overflow-x:hidden;
+    display:flex; flex-direction:column;
+    scrollbar-width:none;
+  }
+  #bios-log::-webkit-scrollbar, #drverify-log::-webkit-scrollbar{ display:none; }
+  #bios-log .ok, #drverify-log .ok{ color:var(--grey);}
+  #bios-log .warn, #drverify-log .warn{ color:var(--danger-bright); font-weight:700;}
+  #bios-log .tag, #drverify-log .tag{ color:var(--blue);}
+  .log-line-in{ animation:logLineIn 0.25s ease-out; }
+  @keyframes logLineIn{
+    from{ opacity:0; transform:translateY(6px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  /* Эффект плавного ухода строки в небытие */
+  .log-line-out {
+    animation: logLineOut 0.4s ease-in forwards;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  @keyframes logLineOut {
+    to {
+      opacity: 0;
+      transform: translateY(-12px);
+      height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+  }
+  #bios .cursor{ display:inline-block; width:8px; height:14px; background:var(--amber); animation:blink 1s step-start infinite; vertical-align:-2px;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .verify-progress{
+    position:absolute; top:6vh; right:6vw; width:64px; text-align:center; z-index:5;
+  }
+  .tri-progress-box{ position:relative; width:100%; }
+  .tri-progress-svg{ width:100%; height:auto; display:block; }
+  .tri-outline{ fill:none; stroke:var(--amber-dim); stroke-width:2.5; }
+  .tri-fill{ fill:var(--amber-bright); filter:drop-shadow(0 0 4px var(--amber)); }
+  .tri-cover{
+    position:absolute; left:0; top:0; width:100%; height:100%;
+    background:var(--void-deep);
+    transform-origin:top; transform:scaleY(1);
+    will-change:transform;
+  }
+  .verify-pct{ font-size:10px; color:var(--grey); margin-top:6px; letter-spacing:1.5px; }
+
+  /* ---------- LOADING SCREEN ---------- */
+  #loading{ align-items:center; justify-content:center; text-align:center; gap:28px;}
+  .sigil{ width:130px; height:130px; position:relative; }
+  .sigil svg{ width:100%; height:100%; overflow:visible; }
+  .sigil-tri{ stroke:var(--blue); stroke-width:1.6; fill:none; opacity:0.55;
+    transform-origin:60px 66px; animation:spin 6s linear infinite; }
+  .sigil-tri.rev{ animation-direction:reverse; animation-duration:9.5s; opacity:0.25; stroke-width:1.2;}
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  .sigil-core{ fill:var(--blue-bright); filter:drop-shadow(0 0 6px var(--blue));}
+
+  #loading .brand{ font-size:13px; letter-spacing:6px; color:var(--blue-bright); }
+  #loading .status{ font-size:12px; color:var(--grey); min-height:16px; letter-spacing:0.5px;}
+  .bar-track{ width:min(70vw, 420px); height:6px; background:var(--grey-dim); position:relative; overflow:hidden;}
+  .bar-fill{ position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg, var(--blue-dim), var(--blue-bright)); transition:width 0.25s linear;}
+  .pct{ font-size:11px; color:var(--grey); letter-spacing:2px;}
+
+  /* ---------- LOGIN SCREEN ---------- */
+  #login{ align-items:center; justify-content:center; }
+  .panel{
+    width:min(88vw, 420px);
+    border:1px solid var(--amber-dim);
+    background:linear-gradient(180deg, rgba(212,168,71,0.04), rgba(0,0,0,0));
+    padding:26px 26px 22px;
+    position:relative;
+  }
+  .panel::before{
+    content:"[ H-2 ]"; position:absolute; top:-11px; left:16px;
+    background:var(--void-deep); padding:0 8px; font-size:11px; color:var(--amber); letter-spacing:2px;
+  }
+  .panel h1{ font-size:20px; letter-spacing:3px; color:var(--amber-bright); margin:0 0 4px; font-weight:700; font-family:'VT323',monospace; text-shadow:0 0 12px rgba(212,168,71,0.3);}
+  .panel .desc{ font-size:11.5px; color:var(--grey); margin:0 0 20px; line-height:1.5;}
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:10.5px; color:var(--grey); letter-spacing:1.5px; margin-bottom:5px;}
+  .field input, .field select{
+    width:100%; background:var(--void); border:1px solid var(--grey-dim);
+    color:var(--paper); font-family:inherit; font-size:13px; padding:9px 10px;
+    outline:none;
+  }
+  .field input:focus, .field select:focus{ border-color:var(--amber); }
+  .check-row{ display:flex; align-items:flex-start; gap:9px; margin:18px 0 20px; font-size:11px; color:var(--grey); line-height:1.5;}
+  .check-row input{ margin-top:2px; accent-color:var(--amber);}
+  .btn{
+    width:100%; background:var(--amber-dim); border:1px solid var(--amber);
+    color:var(--paper); font-family:inherit; font-size:13px; letter-spacing:3px;
+    padding:11px; cursor:pointer; transition:background 0.15s;
+  }
+  .btn:hover{ background:var(--amber); }
+  .btn:disabled{ opacity:0.4; cursor:not-allowed; }
+  .foot-note{ margin-top:16px; font-size:9.5px; color:var(--grey-dim); text-align:center; letter-spacing:1px;}
+
+  /* ---------- RESULT OVERLAY ---------- */
+  #result{ align-items:center; justify-content:center; text-align:center; gap:14px;}
+  #result .big{ font-size:16px; letter-spacing:3px; font-weight:700;}
+  #result .small{ font-size:12px; color:var(--grey); max-width:400px; line-height:1.6;}
+  .glitch-text{ animation:glitchflick 2.4s infinite; }
+  @keyframes glitchflick{
+    0%,96%,100%{ opacity:1; transform:none;}
+    97%{ opacity:0.6; transform:translateX(-1px);}
+    98%{ opacity:1; transform:translateX(1px);}
+  }
+
+  #bootgate{ align-items:center; justify-content:center; text-align:center; cursor:pointer; }  .gate-wrap{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .gate-title{ font-size:20px; letter-spacing:5px; color:var(--amber-bright); font-weight:700; font-family:'VT323',monospace; text-shadow:0 0 18px rgba(212,168,71,0.3); }
+  .gate-sub{ font-size:12px; letter-spacing:2px; color:var(--grey); font-family:'VT323',monospace; }
+  .gate-tap{
+    margin-top:16px; font-size:11.5px; letter-spacing:2px; color:var(--amber);
+    animation:gatePulse 1.6s ease-in-out infinite;
+  }
+  @keyframes gatePulse{
+    0%,100%{ opacity:0.5; }
+    50%{ opacity:1; }
+  }
+
+  /* ---------- SPLASH (SEGA-style boot logo) ---------- */
+  #splash{ align-items:center; justify-content:center; }
+  .splash-wrap{ display:flex; flex-direction:column; align-items:center; gap:22px; }
+  .splash-logo{
+    width:110px; height:auto;
+    opacity:0;
+    animation:splashFadeIn 2s ease-out forwards 0.1s;
+    filter:drop-shadow(0 0 15px rgba(212,168,71,0.5));
+  }
+  .splash-tri{
+    fill:none; stroke:var(--amber); stroke-width:3.2;
+    stroke-dasharray:400; stroke-dashoffset:400;
+    animation:splashDrawTri 2.6s ease-in-out forwards 0.1s;
+  }
+  .splash-eye{
+    fill:var(--amber-bright); opacity:0;
+    animation:splashFadeIn 0.8s ease-out forwards 1.9s;
+  }
+  .splash-caption{
+    font-size:18px; letter-spacing:5px; color:var(--paper); font-weight:700;
+    font-family:'VT323',monospace; text-shadow:0 0 16px rgba(212,168,71,0.3);
+    opacity:0; animation:splashFadeIn 1.2s ease-out forwards 2.6s;
+  }
+  @keyframes splashFadeIn{ to{ opacity:1; } }
+  @keyframes splashDrawTri{ to{ stroke-dashoffset:0; } }
+
+  .sound-toggle{
+    position:fixed; bottom:16px; left:18px; z-index:99;
+    font-size:10px; letter-spacing:1px; color:var(--grey);
+    background:none; border:1px solid var(--grey-dim); padding:6px 10px;
+    font-family:inherit; cursor:pointer;
+  }
+  .sound-toggle:hover{ color:var(--paper); border-color:var(--grey); }
+  .sound-toggle.muted{ color:var(--amber-dim); border-color:var(--amber-dim); }
+
+  /* ---------- GLITCH TRANSITION ---------- */
+  .glitch-overlay{
+    position:fixed; inset:0; z-index:98; pointer-events:none; opacity:0;
+  }
+  .glitch-overlay.active{ animation:glitchBurst 380ms steps(2, end); }
+  @keyframes glitchBurst{
+    0%{ opacity:0; transform:translateX(0); }
+    10%{ opacity:1; transform:translateX(-6px);
+      background:linear-gradient(90deg, rgba(255,20,50,0.16), transparent 35%, rgba(30,150,255,0.14) 75%); }
+    28%{ transform:translateX(5px);
+      background:linear-gradient(90deg, rgba(30,150,255,0.14), transparent 45%, rgba(255,20,50,0.14) 85%); }
+    46%{ opacity:0.75; transform:translateX(-3px); }
+    64%{ opacity:1; transform:translateX(4px); }
+    82%{ opacity:0.35; transform:translateX(-2px); }
+    100%{ opacity:0; transform:translateX(0); }
+  }
+  #stage.glitching{ animation:stageJitter 380ms steps(2, end); }
+  @keyframes stageJitter{
+    0%,100%{ filter:none; }
+    20%{ filter:hue-rotate(8deg) contrast(1.1); }
+    50%{ filter:hue-rotate(-6deg) contrast(1.15); }
+    80%{ filter:hue-rotate(4deg) contrast(1.05); }
+  }
+
+  /* ---------- HOME / DASHBOARD ---------- */
+  #home{ align-items:center; overflow-y:auto; padding-top:4vh; gap:0; }
+  #home::-webkit-scrollbar{ width:0; }
+  .home-title{ font-size:20px; letter-spacing:5px; color:var(--amber-bright); font-weight:700; text-align:center; font-family:'VT323',monospace; text-shadow:0 0 16px rgba(212,168,71,0.3);}
+  .home-sub{ font-size:10.5px; letter-spacing:2.5px; color:var(--grey); margin-top:5px; text-align:center;}
+  .clearance-badge{
+    margin:12px 0 10px; font-size:10.5px; letter-spacing:1.5px; color:var(--blue-bright);
+    border:1px solid var(--blue-dim); padding:5px 14px; background:rgba(47,127,214,0.06);
+  }
+
+  .orbit-wrap{
+    position:relative;
+    width:min(94vw, 560px);
+    aspect-ratio:1;
+    margin:2vh auto 4vh;
+    flex-shrink:0;
+  }
+  .orbit-lines{ position:absolute; inset:0; width:100%; height:100%; z-index:1; }
+  .orbit-lines line{ stroke:var(--amber-dim); stroke-width:0.35; opacity:0.6; }
+
+  .home-logo{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:19%; z-index:3; cursor:pointer;
+  }
+  .home-logo svg{ width:100%; height:auto; display:block; }
+  .home-logo .tri{ stroke:var(--amber); stroke-width:2; fill:none; }
+  .home-logo .tri.inner{ opacity:0.5; stroke-width:1.3; }
+  .home-logo .eye{ fill:var(--amber-bright); filter:drop-shadow(0 0 6px var(--amber));}
+  .home-logo:hover .eye{ filter:drop-shadow(0 0 10px var(--amber-bright)); }
+  .omega-tag{
+    position:absolute; left:50%; top:calc(50% + 9%); transform:translateX(-50%);
+    font-size:8.5px; letter-spacing:2px; color:var(--amber-dim); z-index:3; white-space:nowrap;
+  }
+
+  .zone-node{
+    position:absolute; z-index:2;
+    width:118px; transform:translate(-50%,-50%);
+  }
+  .zone-card{
+    border:1px solid var(--grey-dim); background:rgba(8,9,13,0.72);
+    padding:11px 10px; cursor:pointer; text-align:left; position:relative;
+    transition:border-color 0.15s, background 0.15s;
+    animation:bob 5s ease-in-out infinite;
+    will-change:transform;
+  }
+  .zone-card:hover{ border-color:var(--danger-dim); background:rgba(179,58,58,0.08); }
+  .zone-card.blue-tone:hover{ border-color:var(--blue-dim); background:rgba(47,127,214,0.08); }
+  @keyframes bob{
+    0%,100%{ transform:translateY(0); }
+    50%{ transform:translateY(-7px); }
+  }
+  .zone-card .zid{ font-size:8px; letter-spacing:1.5px; color:var(--grey); margin-bottom:5px;}
+  .zone-card .zname{ font-size:13px; color:var(--paper); line-height:1.35; margin-bottom:8px; font-weight:500; font-family:'VT323',monospace; letter-spacing:0.5px;}
+  .zone-card .zmeta{ display:flex; justify-content:space-between; font-size:8.5px; letter-spacing:0.5px; color:var(--grey);}
+  .zone-card .zclear{ padding:1px 5px; border:1px solid currentColor; }
+  .zone-card.red-tone .zclear{ color:var(--danger); }
+  .zone-card.blue-tone .zclear{ color:var(--blue); }
+
+  @media (max-width:400px){
+    .zone-node{ width:96px; }
+    .zone-card{ padding:8px 8px; }
+    .zone-card .zname{ font-size:9.5px; }
+  }
+  .zone-node.compact{ width:92px; }
+  .zone-node.compact .zone-card{ padding:7px 7px; }
+  .zone-node.compact .zname{ font-size:9px; line-height:1.25; margin-bottom:5px;}
+  .zone-node.compact .zid{ font-size:7px; margin-bottom:3px;}
+  .zone-node.compact .zmeta{ font-size:7.5px;}
+
+  /* ---------- DOC LIST PANEL ---------- */
+  .overlay{
+    position:fixed; inset:1.4vh 1.4vw; z-index:70;
+    background:var(--void-deep); border-radius:7% / 5%;
+    display:none; flex-direction:column; padding:5vh 6vw;
+    overflow-y:auto;
+  }
+  .overlay.active{ display:flex; }
+  .overlay-back{
+    align-self:flex-start; background:none; border:1px solid var(--grey-dim); color:var(--grey);
+    font-family:inherit; font-size:10.5px; letter-spacing:1.5px; padding:6px 12px; cursor:pointer; margin-bottom:20px;
+  }
+  .overlay-back:hover{ color:var(--paper); border-color:var(--grey); }
+  #docListTitle{ font-size:14px; letter-spacing:2px; color:var(--paper); margin-bottom:4px;}
+  #docListSub{ font-size:11px; color:var(--grey); margin-bottom:22px;}
+  .doc-item{
+    border-left:2px solid var(--grey-dim); padding:10px 0 10px 14px; margin-bottom:2px;
+    cursor:pointer; transition:border-color 0.15s;
+  }
+  .doc-item:hover{ border-left-color:var(--amber); }
+  .doc-item .dname{ font-size:12.5px; color:var(--paper); margin-bottom:3px;}
+  .doc-item .dmeta{ font-size:9.5px; color:var(--grey); letter-spacing:1px;}
+  .group-header{
+    font-size:10px; letter-spacing:2px; color:var(--amber-dim);
+    margin:20px 0 8px; text-transform:uppercase;
+    border-bottom:1px solid var(--grey-dim); padding-bottom:6px;
+  }
+  .group-header:first-child{ margin-top:0; }
+  .group-locked{
+    font-size:11.5px; color:var(--grey); line-height:1.6;
+    border:1px dashed var(--grey-dim); padding:16px; margin-top:10px;
+  }
+
+  /* ---------- DOCUMENT READER ---------- */
+  #docBody{ white-space:pre-wrap; font-size:12.5px; line-height:1.75; max-width:640px; }
+  #docBody.tone-red{ color:var(--danger); }
+  #docBody.tone-blue{ color:var(--blue-bright); }
+  #docHeader{ margin-bottom:4px; font-size:14px; letter-spacing:2px; color:var(--paper); }
+  #docClearance{ font-size:10.5px; color:var(--grey); margin-bottom:22px; letter-spacing:1px; }  /* ---------- M.I.C. WIDGET ---------- */
+  #micButton{
+    position:fixed; top:20px; left:20px; z-index:100;
+    width:52px; height:52px; border-radius:50%;
+    background:transparent; border:1.5px solid var(--amber);
+    cursor:pointer;
+    display:none; align-items:center; justify-content:center;
+    transition:border-color 0.2s, box-shadow 0.2s;
+  }
+  #micButton.visible{ display:flex; }
+  #micButton:hover{ border-color:var(--amber-bright); box-shadow:0 0 12px rgba(212,168,71,0.35); }
+
+  .mic-window{
+    position:fixed; top:20px; left:84px; z-index:100;
+    width:250px; background:var(--void-deep);
+    border:1px solid var(--amber-dim); border-radius:4px;
+    overflow:hidden; display:none;
+    box-shadow:0 12px 30px rgba(0,0,0,0.5);
+    font-family:'JetBrains Mono', ui-monospace, monospace;
+  }
+  .mic-window.active{ display:block; }
+
+  .mic-header{
+    height:36px; padding:0 12px; gap:8px;
+    display:flex; align-items:center; justify-content:space-between;
+    background:rgba(212,168,71,0.06);
+    border-bottom:1px solid var(--amber-dim);
+    color:var(--amber-bright); font-size:11px; letter-spacing:2px;
+  }
+  #micCloseBtn{
+    border:none; background:transparent; color:var(--grey); cursor:pointer;
+    font-size:13px; width:22px; height:22px; transition:0.2s;
+  }
+  #micCloseBtn:hover{ color:var(--amber-bright); }
+
+  .mic-mouth-area{
+    width:100%; height:170px; overflow:hidden; background:#000;
+    display:flex; align-items:center; justify-content:center;
+    border-bottom:1px solid var(--grey-dim);
+  }
+  .mic-mouth-area img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    pointer-events:none; user-select:none;
+  }
+
+  .mic-status-line{ font-size:9px; color:var(--grey); display:flex; align-items:center; flex:1; letter-spacing:1px; }
+  .mic-status-dot{
+    width:6px; height:6px; border-radius:50%; margin-right:5px; flex-shrink:0;
+    background:#5aa06a;
+  }
+  .mic-status-dot.busy{ background:#c9962e; }
+  .mic-status-dot.error{ background:var(--danger-bright); }
+
+  .mic-speech{
+    padding:10px 12px; min-height:60px; max-height:110px; overflow-y:auto;
+    font-size:11.5px; line-height:1.6; color:var(--grey);
+    scrollbar-width:none;
+  }
+  .mic-speech::-webkit-scrollbar{ display:none; }
+  .mic-speech .sys{ color:var(--grey); }
+  .mic-speech .err{ color:var(--danger-bright); font-weight:700; }
+  .mic-speech .ok{ color:#7fae7a; }
+  .mic-speech .echo{ color:var(--grey-dim); font-size:10.5px; }
+
+  .mic-cmd-row{ display:flex; gap:6px; padding:0 12px 12px; }
+  #micCmdInput{
+    flex:1; background:var(--void); border:1px solid var(--grey-dim);
+    padding:7px 9px; color:var(--paper); font-family:inherit; font-size:11.5px; outline:none;
+  }
+  #micCmdInput:focus{ border-color:var(--amber); }
+  #micCmdSend{
+    width:32px; border:1px solid var(--grey-dim); background:var(--void);
+    color:var(--grey); cursor:pointer; font-size:13px; font-family:inherit;
+  }
+  #micCmdSend:hover{ border-color:var(--amber); color:var(--amber-bright); }
+
+  @media(max-width:480px){
+    .mic-window{ width:70vw; left:15vw; top:16px; }
+  }
+</style>
+</head>
+<body class="crt">
+<div class="noise"></div>
+<div class="glitch-overlay" id="glitchLayer"></div>
+<button class="sound-toggle" id="soundToggle">ЗВУК: ВКЛ</button>
+
+<!-- M.I.C. -->
+<button id="micButton" onclick="openMIC()" aria-label="Открыть M.I.C.">
+  <svg viewBox="0 0 24 24" width="20" height="20">
+    <circle cx="12" cy="12" r="2" fill="var(--amber-bright)"/>
+    <path d="M 12 6 A 6 6 0 0 1 12 18" fill="none" stroke="var(--amber)" stroke-width="1.4"/>
+    <path d="M 12 3 A 9 9 0 0 1 12 21" fill="none" stroke="var(--amber)" stroke-width="1" opacity="0.5"/>
+  </svg>
+</button>
+<div id="micWindow" class="mic-window">
+  <div class="mic-header">
+    <span>M.И.К.</span>
+    <span class="mic-status-line"><span class="mic-status-dot" id="micStatusDot"></span><span id="micStatusText">N-NET // ОНЛАЙН</span></span>
+    <button id="micCloseBtn" onclick="closeMIC()" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="mic-mouth-area">
+    <img id="micMouth" src="1000075322.png" alt="M.I.C.">
+  </div>
+  <div class="mic-speech" id="micText"></div>
+  <div class="mic-cmd-row">
+    <input type="text" id="micCmdInput" placeholder="Команда..." autocomplete="off">
+    <button id="micCmdSend" aria-label="Отправить">›</button>
+  </div>
+</div>
+
+<div class="tv-frame">
+<div id="stage">
+
+  <!-- BOOT GATE -->
+  <div class="screen active" id="bootgate">
+    <div class="gate-wrap">
+      <div class="gate-title">N.O.T.H.I.N.G. FOUNDATION</div>
+      <div class="gate-sub">ТЕРМИНАЛ ДОСТУПА НЕАКТИВЕН</div>
+      <div class="gate-tap">[ НАЖМИТЕ, ЧТОБЫ АКТИВИРОВАТЬ ТЕРМИНАЛ ]</div>
+    </div>
+  </div>
+
+  <!-- SPLASH (SEGA-style boot logo) -->
+  <div class="screen" id="splash">
+    <div class="splash-wrap">
+      <svg class="splash-logo" viewBox="0 0 100 115">
+        <polygon class="splash-tri" points="50,12 94,106 6,106"/>
+        <circle class="splash-eye" cx="50" cy="70" r="7"/>
+      </svg>
+      <div class="splash-caption">N.O.T.H.I.N.G. FOUNDATION</div>
+    </div>
+  </div>
+
+  <!-- BIOS -->
+  <div class="screen" id="bios">
+    <div class="head">N.O.T.H.I.N.G. FOUNDATION — SYSTEM BIOS v.4.91</div>
+    <div class="sub">COPYRIGHT © К.К.И.р.Д. — КОМИТЕТ КОНТРОЛЯ И РАЗРЕШЕНИЯ ДОПУСКА</div>
+    <div id="bios-log"></div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="screen" id="loading">
+    <div class="sigil">
+      <svg viewBox="0 0 120 132">
+        <polygon class="sigil-tri" points="60,12 108,116 12,116"/>
+        <polygon class="sigil-tri rev" points="60,30 94,104 26,104"/>
+        <circle class="sigil-core" cx="60" cy="78" r="6"/>
+      </svg>
+    </div>
+    <div class="brand">N.O.T.H.I.N.G.</div>
+    <div class="status" id="loadStatus">инициализация терминала...</div>
+    <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+    <div class="pct" id="pctText">0%</div>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="screen" id="login">
+    <div class="panel">
+      <h1>ТЕРМИНАЛ ДОСТУПА</h1>
+      <p class="desc">Введите учётные данные для входа в систему Фонда. Все сеансы протоколируются К.К.И.р.Д.</p>
+      <div class="field">
+        <label>ID СОТРУДНИКА</label>
+        <input type="text" id="empId" placeholder="XX-XX-XXXX" maxlength="10" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>УРОВЕНЬ ДОПУСКА</label>
+        <select>
+          <option>F — Штатный/офисный персонал (60% Фонда)</option>
+          <option>I-0 — Общий персонал</option>
+          <option>I-1 — Внутренний</option>
+          <option>F-1 — Ограниченный научный</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>ПАРОЛЬ</label>
+        <input type="password" id="empPass" placeholder="••••••••••">
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="cogCheck">
+        <label for="cogCheck">Подтверждаю прохождение когнитивной проверки. Отклонений в восприятии не выявлено.</label>
+      </div>
+      <button class="btn" id="loginBtn">ВОЙТИ В СИСТЕМУ</button>
+      <div class="foot-note">НЕСАНКЦИОНИРОВАННЫЙ ДОСТУП КАРАЕТСЯ СОГЛАСНО ПРОТОКОЛУ «ПОГРЕБЕНИЕ»</div>
+    </div>
+  </div>
+
+  <!-- DR VERIFY -->
+  <div class="screen" id="drverify">
+    <div class="head">АВТОРИЗАЦИЯ СОТРУДНИКА</div>
+    <div class="sub">N.O.T.H.I.N.G. FOUNDATION — ПЕРСОНАЛЬНЫЙ ТЕРМИНАЛ</div>
+    <div class="verify-progress">
+      <div class="tri-progress-box">
+        <svg viewBox="0 0 100 100" class="tri-progress-svg">
+          <polygon class="tri-outline" points="50,4 96,96 4,96"/>
+          <polygon class="tri-fill" points="50,4 96,96 4,96"/>
+        </svg>
+        <div class="tri-cover" id="triCover"></div>
+      </div>
+      <div class="verify-pct" id="verifyPct">90с</div>
+    </div>
+    <div id="drverify-log"></div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="screen" id="result">
+    <div class="big" style="color:var(--blue-bright)">ДОСТУП ПОДТВЕРЖДЁН</div>
+    <div class="small">Уровень допуска зафиксирован. Когнитивный маркер лояльности: <span class="glitch-text" style="color:var(--danger-bright)">СТАБИЛЕН</span>.</div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="home">
+    <div class="home-title">N.O.T.H.I.N.G.</div>
+    <div class="home-sub">ЦЕНТРАЛЬНЫЙ АРХИВ ДОКУМЕНТОВ</div>
+    <div class="clearance-badge" id="clearanceBadge">ДОПУСК: I-0</div>
+
+    <div class="orbit-wrap" id="orbitWrap">
+      <svg class="orbit-lines" id="orbitLines" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+
+      <div class="home-logo" id="homeLogo">
+        <svg viewBox="0 0 100 110">
+          <polygon class="tri" points="50,6 94,100 6,100"/>
+          <polygon class="tri inner" points="50,26 80,88 20,88"/>
+          <circle class="eye" cx="50" cy="66" r="5"/>
+        </svg>
+      </div>
+      <div class="omega-tag">Ω — ХРАНИЛИЩЕ ЯДРА</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- DOC LIST OVERLAY -->
+<div class="overlay" id="docListOverlay">
+  <button class="overlay-back" id="backToHome">« К ЗОНАМ</button>
+  <div id="docListTitle"></div>
+  <div id="docListSub"></div>
+  <div id="docListItems"></div>
+</div>
+
+<!-- DOC READER OVERLAY -->
+<div class="overlay" id="docReaderOverlay">
+  <button class="overlay-back" id="backToList">« НАЗАД К СПИСКУ</button>
+  <div id="docHeader"></div>
+  <div id="docClearance"></div>
+  <div id="docBody"></div>
+</div>
+
+<script>
+/* ================= M.I.C. WIDGET ================= */
+const MIC_FRAME_CLOSED = "1000075321.png"; // рот закрыт (покой) — поменял местами с открытым
+const MIC_FRAME_OPEN   = "1000075322.png"; // рот открыт (разговор)
+const MIC_FRAME_INTERVAL = 70; // мс, диапазон 60-80 из ТЗ
+
+let micMouthTimer = null;
+let micCurrentFrame = MIC_FRAME_CLOSED;
+let micSpeakGen = 0;
+
+function openMIC(){
+  document.getElementById('micWindow').classList.add('active');
+  SFX.click();
+  if(document.getElementById('micText').children.length === 0){
+    micSpeak(()=> micPrintSystem('ГОТОВ К ПРИЁМУ КОМАНД.'));
+  }
+}
+function closeMIC(){
+  document.getElementById('micWindow').classList.remove('active');
+  micSpeakGen++; // отменяет любые ожидающие остановки — сразу глушим
+  stopMouthAnimation();
+  SFX.click();
+}
+function startMouthAnimation(){
+  if(micMouthTimer) return;
+  const micMouth = document.getElementById('micMouth');
+  micMouthTimer = setInterval(()=>{
+    micCurrentFrame = (micCurrentFrame === MIC_FRAME_CLOSED) ? MIC_FRAME_OPEN : MIC_FRAME_CLOSED;
+    micMouth.src = micCurrentFrame;
+  }, MIC_FRAME_INTERVAL);
+}
+function stopMouthAnimation(){
+  if(micMouthTimer){ clearInterval(micMouthTimer); micMouthTimer = null; }
+  micCurrentFrame = MIC_FRAME_CLOSED;
+  document.getElementById('micMouth').src = MIC_FRAME_CLOSED;
+}
+
+/* ---- вывод строк в лог М.И.К. ---- */
+function micPrintLine(cls, content){
+  const log = document.getElementById('micText');
+  const line = document.createElement('div');
+  line.className = cls;
+  line.textContent = content;
+  log.appendChild(line);
+  while(log.children.length > 6){ log.removeChild(log.firstElementChild); }
+  log.scrollTop = log.scrollHeight;
+}
+function micPrintSystem(t){ micPrintLine('sys', t); }
+function micPrintOk(t){ micPrintLine('ok', t); }
+function micPrintErr(t){ micPrintLine('err', t); }
+function micPrintEcho(t){ micPrintLine('echo', '> ' + t); }
+
+function micSetStatus(mode, label){
+  document.getElementById('micStatusDot').className = 'mic-status-dot' + (mode ? ' ' + mode : '');
+  document.getElementById('micStatusText').textContent = label;
+}
+
+/* "Произнести" ответ: двигать рот, пока текст выводится, затем остановить */
+function micSpeak(fn){
+  micSpeakGen++;
+  const myGen = micSpeakGen;
+  startMouthAnimation();
+  fn();
+  const closeDelay = 700 + Math.random()*500;
+  setTimeout(()=>{
+    if(myGen === micSpeakGen) stopMouthAnimation();
+  }, closeDelay);
+}
+
+function micHandleCommand(raw){
+  const cmd = raw.trim().toLowerCase();
+  if(!cmd) return;
+  micPrintEcho(raw);
+  SFX.click();
+
+  micSetStatus('busy', 'ОБРАБОТКА...');
+
+  setTimeout(()=>{
+    if(cmd.includes('допуск') || cmd.includes('доступ')){
+      micSpeak(()=>{ micSetStatus(null, 'N-NET // ОНЛАЙН'); micPrintSystem('ЗАПРОС ПЕРЕДАН В К.К.И.р.Д. ОЖИДАЙТЕ РЕШЕНИЯ.'); });
+    } else if(cmd.includes('репутация') || cmd.includes('кредит')){
+      micSpeak(()=>{ micSetStatus(null, 'N-NET // ОНЛАЙН'); micPrintSystem('РЕПУТАЦИОННЫЙ ИНДЕКС: [ДАННЫЕ ОГРАНИЧЕНЫ]'); });
+    } else if(cmd.includes('ева') || cmd.includes('амигдала') || cmd.includes('патоген')){
+      micSpeak(()=>{ micSetStatus('error', 'ОШИБКА ДОСТУПА'); micPrintErr('ОШИБКА ДОСТУПА. НЕДОСТАТОЧНЫЙ УРОВЕНЬ ДОПУСКА.'); });
+      setTimeout(()=> micSetStatus(null, 'N-NET // ОНЛАЙН'), 1600);
+    } else if(cmd === 'помощь' || cmd === 'help'){
+      micSpeak(()=> micPrintSystem('ДОСТУПНЫЕ КОМАНДЫ: ДОПУСК, РЕПУТАЦИЯ, СТАТУС.'));
+    } else if(cmd === 'статус'){
+      micSpeak(()=> micPrintOk('СИСТЕМА СТАБИЛЬНА. N-NET АКТИВЕН.'));
+    } else {
+      micSetStatus('error', 'ОШИБКА');
+      micSpeak(()=> micPrintErr('КОМАНДА НЕ РАСПОЗНАНА.'));
+      setTimeout(()=> micSetStatus(null, 'N-NET // ОНЛАЙН'), 1600);
+    }
+  }, 450 + Math.random()*350);
+}
+
+document.getElementById('micCmdSend').addEventListener('click', ()=>{
+  micHandleCommand(document.getElementById('micCmdInput').value);
+  document.getElementById('micCmdInput').value = '';
+});
+document.getElementById('micCmdInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    micHandleCommand(document.getElementById('micCmdInput').value);
+    document.getElementById('micCmdInput').value = '';
+  }
+});
+
+/* ================= SOUND ENGINE (SFX) ================= */
+const SFX = {
+  ctx:null, ready:false, ambientOn:false, tickCounter:0, muted:false, masterGain:null,
+  ensureCtx(){
+    if(!this.ctx){
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this._buildBuffers();
+      this.limiter = this.ctx.createDynamicsCompressor();
+      this.limiter.threshold.value = -18;
+      this.limiter.knee.value = 12;
+      this.limiter.ratio.value = 14;
+      this.limiter.attack.value = 0.002;
+      this.limiter.release.value = 0.15;
+      this.limiter.connect(this.ctx.destination);
+    }
+    if(this.ctx.state === 'suspended') this.ctx.resume();
+    return this.ctx;
+  },
+  _makeNoiseBuffer(seconds){
+    const ctx = this.ctx;
+    const size = Math.max(1, Math.floor(ctx.sampleRate * seconds));
+    const buffer = ctx.createBuffer(1, size, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<size;i++){
+      data[i] = (Math.random()*2 - 1) * (1 - i/size); // fade tail, avoids clicks
+    }
+    return buffer;
+  },
+  _buildBuffers(){
+    this.tickBuf = this._makeNoiseBuffer(0.014);
+    this.clickBuf = this._makeNoiseBuffer(0.04);
+    this.glitchBuf = this._makeNoiseBuffer(0.2);
+    this.crackleBuf = this._makeNoiseBuffer(0.09);
+  },
+  playTone(freq, dur, type, vol){
+    if(this.muted) return;
+    const ctx = this.ensureCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    osc.connect(gain); gain.connect(this.limiter);
+    osc.start(); osc.stop(ctx.currentTime + dur);
+  },
+  playNoise(buffer, filterType, filterFreq, vol, dur){
+    if(this.muted) return;
+    const ctx = this.ensureCtx();
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = filterType; filter.frequency.value = filterFreq;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    src.connect(filter); filter.connect(gain); gain.connect(this.limiter);
+    src.start();
+  },
+  click(){ this.playNoise(this.clickBuf, 'highpass', 1200, 0.05, 0.04); this.playTone(340, 0.03, 'square', 0.025); },
+  tick(){
+    this.tickCounter++;
+    if(this.tickCounter % 3 !== 0) return; // throttle: every third char
+    this.playNoise(this.tickBuf, 'highpass', 2200, 0.03, 0.014);
+  },
+  glitch(){ this.playNoise(this.glitchBuf, 'bandpass', 1700, 0.07, 0.2); },
+  beep(freq){ this.playTone(freq || 720, 0.11, 'sine', 0.035); },
+  crackle(){ this.playNoise(this.crackleBuf, 'lowpass', 2500, 0.045, 0.09); },
+  startAmbient(){
+    if(this.ambientOn) return;
+    this.ambientOn = true;
+    const ctx = this.ensureCtx();
+    const master = ctx.createGain();
+    master.gain.value = this.muted ? 0 : 0.9;
+    master.connect(this.limiter);
+    this.masterGain = master;
+
+    const osc1 = ctx.createOscillator(); osc1.type='sine'; osc1.frequency.value=57;
+    const osc2 = ctx.createOscillator(); osc2.type='sine'; osc2.frequency.value=60.5;
+    const humGain = ctx.createGain(); humGain.gain.value = 0.018;
+    osc1.connect(humGain); osc2.connect(humGain); humGain.connect(master);
+    osc1.start(); osc2.start();
+
+    const noiseSize = ctx.sampleRate * 2;
+    const noiseBuf = ctx.createBuffer(1, noiseSize, ctx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for(let i=0;i<noiseSize;i++) nd[i] = Math.random()*2-1;
+    const noiseSrc = ctx.createBufferSource();
+    noiseSrc.buffer = noiseBuf; noiseSrc.loop = true;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type='lowpass'; noiseFilter.frequency.value=300;
+    const noiseGain = ctx.createGain(); noiseGain.gain.value = 0.014;
+    noiseSrc.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(master);
+    noiseSrc.start();
+
+    setInterval(()=>{ if(Math.random() < 0.3) this.crackle(); }, 3800);
+  },
+  toggleMute(){
+    this.muted = !this.muted;
+    if(this.masterGain){
+      this.masterGain.gain.setTargetAtTime(this.muted ? 0 : 0.9, this.ctx.currentTime, 0.05);
+    }
+    return this.muted;
+  }
+};
+
+const biosLines = [
+  {t:'ok', text:'ПРОВЕРКА ПАМЯТИ ......................... 500 HOMO NEUROS ОБНАРУЖЕНО'},
+  {t:'ok', text:'РАЗГОН РЕАКТОРА, ЗОНА 19 ................ 12% → 74%'},
+  {t:'ok', text:'ОХЛАЖДЕНИЕ ДВИГАТЕЛЯ ..................... ЦИРКУЛЯЦИЯ НОРМАЛЬНАЯ'},
+  {t:'ok', text:'РЕАКТОРЫ БВК, ЗОНА 19 ................... 41.4°C [НОРМА]'},
+  {t:'tag', text:'ПОДКЛЮЧЕНИЕ ДОПОЛНИТЕЛЬНЫХ КАНАЛОВ ....... 4 ИЗ 4 АКТИВНЫ'},
+  {t:'ok', text:'ПОДКЛЮЧЕНИЕ ШКАФА К СЕТИ ................. УСТАНОВЛЕНО'},
+  {t:'ok', text:'ВВОД СТИМУЛЯТОРОВ, ШТАММ АМДа-00 ......... ДОЗА ВВЕДЕНА'},
+  {t:'ok', text:'ПАТОГЕН АМДа-00, УРОВЕНЬ ТОПЛИВА ........ 78%'},
+  {t:'tag', text:'АВТОРИЗАЦИЯ КЛЮЧА ДОСТУПА ................ ПОДТВЕРЖДЕНО'},
+  {t:'tag', text:'ИИ-АНАЛИЗАТОР ............................ АКТИВЕН'},
+  {t:'tag', text:'КОГНИТИВНЫЙ ФИЛЬТР ....................... ЗАГРУЖЕН'},
+  {t:'ok', text:'СВЯЗЬ С ЦЕНТРАЛЬНЫМ АРХИВОМ .............. ЕСТЬ'},
+  {t:'warn', text:'ШКАФ №2: АНОМАЛЬНАЯ АКТИВНОСТЬ ........... [ПОДАВЛЕНО]'},
+  {t:'ok', text:'СОРТИРОВКА ПРОДОЛЖАЕТСЯ...'},
+];
+
+const loadingMessages = [
+  'сверка допуска с К.К.И.р.Д...',
+  'синхронизация с Центральным Архивом...',
+  'проверка когнитивной стабильности...',
+  'подавление фоновых сигналов...',
+  'загрузка терминала доступа...'
+];
+
+let skipped = false;
+
+document.getElementById('soundToggle').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  SFX.ensureCtx();
+  const isMuted = SFX.toggleMute();
+  const btn = document.getElementById('soundToggle');
+  btn.textContent = isMuted ? 'ЗВУК: ВЫКЛ' : 'ЗВУК: ВКЛ';
+  btn.classList.toggle('muted', isMuted);
+  if(!isMuted) SFX.startAmbient();
+});
+
+document.getElementById('bootgate').addEventListener('click', function startGate(){
+  SFX.ensureCtx();
+  SFX.startAmbient();
+  SFX.click();
+  document.getElementById('bootgate').classList.remove('active');
+  document.getElementById('splash').classList.add('active');
+  setTimeout(()=>{
+    triggerGlitch();
+    document.getElementById('splash').classList.remove('active');
+    document.getElementById('bios').classList.add('active');
+    typeLines();
+  }, 3600);
+}, { once:true });
+
+document.getElementById('empId').addEventListener('input', (e)=>{
+  let raw = e.target.value.toUpperCase().replace(/[^A-ZА-Я0-9]/g, '');
+  raw = raw.slice(0, 8);
+  let out = raw.slice(0, 2);
+  if(raw.length > 2) out += '-' + raw.slice(2, 4);
+  if(raw.length > 4) out += '-' + raw.slice(4, 8);
+  e.target.value = out;
+});
+
+const MAX_LOG_LINES = 8;
+function capLog(log) {
+  const activeLines = Array.from(log.children).filter(child => !child.classList.contains('log-line-out'));
+
+  if (activeLines.length > MAX_LOG_LINES) {
+    const oldestLine = activeLines[0];
+    oldestLine.classList.add('log-line-out');
+
+    setTimeout(() => {
+      if (oldestLine.parentNode === log) {
+        log.removeChild(oldestLine);
+      }
+    }, 400);
+  }
+  log.scrollTop = log.scrollHeight;
+}
+
+function typeIntoLog(containerId, lines, onDone, onProgress){
+  const log = document.getElementById(containerId);
+  let i = 0;
+  function nextLine(){
+    if(skipped) return;
+    if(i >= lines.length){
+      setTimeout(()=>{ if(!skipped) onDone(); }, 900);
+      return;
+    }
+    const line = lines[i];
+    const div = document.createElement('div');
+    div.className = line.t + ' log-line-in';
+    log.appendChild(div);
+    capLog(log);
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    let ci = 0;
+    function typeChar(){
+      if(skipped) return;
+      if(ci < line.text.length){
+        div.textContent = line.text.slice(0, ci+1);
+        div.appendChild(cursor);
+        log.scrollTop = log.scrollHeight;
+        ci++;
+        SFX.tick();
+        setTimeout(typeChar, line.t === 'warn' ? 26 : 13);
+      } else {
+        cursor.remove();
+        i++;
+        if(onProgress) onProgress(i, lines.length);
+        setTimeout(nextLine, line.t === 'warn' ? 750 : 380);
+      }
+    }
+    typeChar();
+  }
+  nextLine();
+}
+
+function typeLines(){
+  typeIntoLog('bios-log', biosLines, goToLoading);
+}
+
+function triggerGlitch(){
+  SFX.glitch();
+  const g = document.getElementById('glitchLayer');
+  g.classList.remove('active');
+  void g.offsetWidth;
+  g.classList.add('active');
+  const stage = document.getElementById('stage');
+  stage.classList.add('glitching');
+  setTimeout(()=>{ stage.classList.remove('glitching'); }, 380);
+}
+
+function goToLoading(){
+  triggerGlitch();
+  document.getElementById('bios').classList.remove('active');
+  document.getElementById('loading').classList.add('active');
+  runLoadingBar();
+}
+
+function runLoadingBar(){
+  const fill = document.getElementById('barFill');
+  const pct = document.getElementById('pctText');
+  const status = document.getElementById('loadStatus');
+  let p = 0;
+  let msgIdx = 0;
+  status.textContent = loadingMessages[0];
+  const msgTimer = setInterval(()=>{
+    if(skipped){ clearInterval(msgTimer); return; }
+    msgIdx = (msgIdx+1) % loadingMessages.length;
+    status.textContent = loadingMessages[msgIdx];
+  }, 1400);
+  const barTimer = setInterval(()=>{
+    if(skipped){ clearInterval(barTimer); clearInterval(msgTimer); return; }
+    p += Math.random()*1.6 + 0.5;
+    if(p >= 100){ p = 100; }
+    fill.style.width = p + '%';
+    pct.textContent = Math.floor(p) + '%';
+    if(p >= 100){
+      clearInterval(barTimer);
+      clearInterval(msgTimer);
+      setTimeout(goToLogin, 700);
+    }
+  }, 90);
+}
+
+function goToLogin(){
+  triggerGlitch();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('login').classList.add('active');
+  skipped = false;
+}
+
+const drVerifyLines = [
+  {t:'ok', text:'Инициализация терминала уровня Ω .......... OK'},
+  {t:'ok', text:'Считывание ID сотрудника .................. NF-DR-3197'},
+  {t:'ok', text:'Биометрия .................... ПОДТВЕРЖДЕНА'},
+  {t:'tag', text:'Расшифровка ключа доступа ................. ВЫПОЛНЕНО'},
+  {t:'ok', text:'Когнитивная сигнатура ........ СОВПАДЕНИЕ'},
+  {t:'tag', text:'Сверка с базой К.К.И.р.Д. .................. ЕСТЬ'},
+  {t:'tag', text:'Шифрование ................... АКТИВНО'},
+  {t:'ok', text:'Проверка допуска к лабораторным образцам ... РАЗРЕШЕНО'},
+  {t:'ok', text:'Проверка допуска к секции БВК .............. РАЗРЕШЕНО'},
+  {t:'ok', text:'Сопоставление личного дела .................. НАЙДЕНО'},
+  {t:'warn', text:'ПРЕДУПРЕЖДЕНИЕ: длительное пребывание в лаборатории'},
+  {t:'ok', text:'Синхронизация с Центральным Архивом ........ ЕСТЬ'},
+  {t:'ok', text:'Доступ разрешён.'},
+  {t:'tag', text:'Здравствуйте, Доктор Д.'},
+  {t:'tag', text:'Уровень допуска: A-7'},
+  {t:'ok', text:'Статус: АКТИВЕН'},
+  {t:'ok', text:'Последний вход: 03:17:41'},
+  {t:'ok', text:'Загрузка персонального рабочего пространства...'},
+];
+
+function typeIntoLogTimed(containerId, lines, totalMs, onDone){
+  const log = document.getElementById(containerId);
+  const perLine = totalMs / lines.length;
+  let i = 0;
+  function nextLine(){
+    if(skipped) return;
+    if(i >= lines.length){
+      setTimeout(()=>{ if(!skipped) onDone(); }, 300);
+      return;
+    }
+    const line = lines[i];
+    const div = document.createElement('div');
+    div.className = line.t + ' log-line-in';
+    log.appendChild(div);
+    capLog(log);
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    const charBudget = Math.max(perLine * 0.65, 200);
+    const charDelay = Math.max(charBudget / Math.max(line.text.length, 1), 8);
+    let ci = 0;
+    function typeChar(){
+      if(skipped) return;
+      if(ci < line.text.length){
+        div.textContent = line.text.slice(0, ci+1);
+        div.appendChild(cursor);
+        log.scrollTop = log.scrollHeight;
+        ci++;
+        SFX.tick();
+        setTimeout(typeChar, charDelay);
+      } else {
+        cursor.remove();
+        i++;
+        const pause = perLine - charBudget;
+        setTimeout(nextLine, Math.max(pause, 60));
+      }
+    }
+    typeChar();
+  }
+  nextLine();
+}
+
+function startTriFillTimer(durationMs){
+  const cover = document.getElementById('triCover');
+  const pctEl = document.getElementById('verifyPct');
+  cover.style.transition = 'none';
+  cover.style.transform = 'scaleY(1)';
+  void cover.offsetWidth;
+  cover.style.transition = `transform ${durationMs}ms linear`;
+  requestAnimationFrame(()=>{
+    cover.style.transform = 'scaleY(0)';
+  });
+  const start = Date.now();
+  const interval = setInterval(()=>{
+    const elapsed = Date.now() - start;
+    const remaining = Math.max(0, Math.ceil((durationMs - elapsed) / 1000));
+    pctEl.textContent = remaining + 'с';
+    if(elapsed >= durationMs) clearInterval(interval);
+  }, 200);
+}
+
+const VERIFY_DURATION_MS = 90000; // fixed 1 minute 30 seconds
+
+document.getElementById('loginBtn').addEventListener('click', ()=>{
+  SFX.click();
+  const idValue = document.querySelector('#login input[type="text"]').value.trim();
+  const passValue = document.querySelector('#login input[type="password"]').value.trim();
+  const isDoctor = (idValue === 'NF-DR-3197' && passValue.toLowerCase() === 'wenotall');
+
+  triggerGlitch();
+  document.getElementById('login').classList.remove('active');
+
+  if(isDoctor){
+    skipped = false;
+    currentAccount = 'doctor';
+    document.getElementById('drverify').classList.add('active');
+    startTriFillTimer(VERIFY_DURATION_MS);
+    typeIntoLogTimed('drverify-log', drVerifyLines, VERIFY_DURATION_MS, ()=>{
+      triggerGlitch();
+      document.getElementById('drverify').classList.remove('active');
+      document.getElementById('clearanceBadge').textContent = 'ДОПУСК: A-7 — СТАРШИЙ СПЕЦИАЛИСТ Д.';
+      renderOrbit(folders);
+      document.getElementById('home').classList.add('active');
+      document.getElementById('micButton').classList.add('visible');
+    });
+    return;
+  }
+
+  currentAccount = 'general';
+  const clearanceSelect = document.querySelector('#login select');
+  const clearanceText = clearanceSelect.options[clearanceSelect.selectedIndex].text;
+  document.getElementById('clearanceBadge').textContent = 'ДОПУСК: ' + clearanceText.split(' — ')[0];
+  renderOrbit(folders);
+  document.getElementById('result').classList.add('active');
+  setTimeout(()=>{
+    triggerGlitch();
+    document.getElementById('result').classList.remove('active');
+    document.getElementById('home').classList.add('active');
+    document.getElementById('micButton').classList.add('visible');
+  }, 1600);
+});
+
+/* ---------------- ZONE / DOCUMENT DATA ---------------- */
+const zones = [
+  {
+    id:'archive', tone:'red', clearance:'Ω',
+    name:'СЕКТОР -5 — ЦЕНТРАЛЬНЫЙ АРХИВ',
+    docs:[
+      { title:'«Начало всего» — фрагмент найденного текста', clearance:'Ω', tone:'red',
+        body:`Начало всего.
+
+Мир был создан не из материи,
+а из мысли.
+
+Создатель исчез.
+И создание научилось жить без него.
+
+Прошли миллионы лет.
+
+Появились "Первые".
+
+[ДОСТУП ОГРАНИЧЕН]
+
+[System Failure]
+
+>>> Выполняется анализ...
+>>> Решение не найдено.
+
+[Протокол «Погребение» активирован]` }
+    ]
+  },
+  {
+    id:'amygdala', tone:'blue', clearance:'A-1',
+    name:'ЗОНА 19 — ПРОЕКТ «АМИГДАЛА»',
+    docs:[
+      { title:'Статус проекта «АмигДала»', clearance:'H-2', tone:'blue',
+        body:`[АмигДала]
+
+Проект — "АмигДала", в данный момент находится в стадии разработки.
+
+Дополнительные сведения:
+— персонал «Класса-F» при контакте с [Данные Удалены] имеют визуальные, слуховые, физические галлюцинации.
+— при попытке бегства сотрудников «Класса-F», применяется огнестрельное и зажигательное оружие. Для не распространения [Данные Удалены] по комплексу [Данные Удалены].` },
+      { title:'Полевое предупреждение: искажённые', clearance:'H-2', tone:'red',
+        body:`ПРЕДУПРЕЖДЕНИЕ
+
+Не подходите к искажённым или тем, кто находится в [Данные Удалены].
+
+Иначе человек умрёт или заразит вас.` }
+    ]
+  },
+  {
+    id:'kkird', tone:'blue', clearance:'I-1',
+    name:'К.К.И.р.Д. — ДОПУСК И КАДРЫ',
+    docs:[
+      { title:'Запрос на повышение уровня допуска', clearance:'I-1', tone:'blue',
+        body:`N.O.T.H.I.N.G. FOUNDATION
+К.К.И.р.Д.
+КОМИТЕТ КОНТРОЛЯ И РАЗРЕШЕНИЯ ДОПУСКА
+
+ЗАПРОС НА ПОВЫШЕНИЕ УРОВНЯ ДОПУСКА
+
+Сотрудник: __________
+Текущий уровень: H-2
+Запрашиваемый уровень: V
+
+Причина:
+_________________________
+
+Решение К.К.И.р.Д.
+☐ Одобрено
+☐ Отклонено
+☐ Передано на рассмотрение Верховного Совета` },
+      { title:'Иерархия уровней допуска', clearance:'I-1', tone:'blue',
+        body:`I-0   Общий персонал — только свой отдел. Фонд воспринимается как международный исследовательский центр.
+
+I-1   Внутренний — допуск к нескольким секторам, знает о существовании секретных проектов без деталей.
+
+F-1   Ограниченный научный — работа с опасными материалами и карантинными зонами. Не знает происхождения объектов.
+
+A-1   Проект «АмигДала» — исследования патогена АМДа.
+
+H-1   Проект «Ева» — частичный доступ к останкам Евы.
+
+V-1   Патоген — работа с живыми заражёнными и биологическими носителями.
+
+N-1   Homo Neuros — биологические вычислительные комплексы и связанные технологии.
+
+Ω     Стратегический — проекты «Крылья Евы», космические операции, сведения о Первых.
+
+∆/Ω/∞  Верховный Совет — полная история мира, Творцы, все проекты без ограничений.` }
+    ]
+  },
+  {
+    id:'pwoe', tone:'blue', clearance:'H-2',
+    name:'ПРОГРАММА P.W.O.E. — «КРЫЛЬЯ ЕВЫ»',
+    docs:[
+      { title:'Инструктаж: стратегическая инициатива «Крылья Евы»', clearance:'H-2', tone:'blue',
+        body:`ОТДЕЛ КАДРОВОЙ ПОДГОТОВКИ И ИНДОКТРИНАЦИИ
+БРОШЮРА ДЛЯ НОВЫХ СОТРУДНИКОВ (УРОВЕНЬ H-2)
+
+КОСМИЧЕСКАЯ ПРОГРАММА [A&E]: «КРЫЛЬЯ ЕВЫ»
+
+Приветствуем вас в рядах Фонда N.O.T.H.I.N.G. Программа «Крылья Евы» (P.W.O.E.) — это не паническое бегство и не колонизация. Это научная и логистическая экспансия ради сохранения будущего человечества.
+
+ГЛАВНЫЕ ЦЕЛИ:
+— Поиск следов Первых: их древняя инфраструктура рассредоточена по всей Солнечной системе.
+— Сбор биологического материала: на Марсе обнаружена пара костей Адама, критически необходимых для проекта «Реконструкция».
+— Технологический мониторинг: контроль удалённых объектов Первых, включая автоматическое ПВО на Нептуне.
+
+ВЗАИМОСВЯЗЬ С ЗЕМНОЙ ИНФРАСТРУКТУРОЙ:
+БВК Homo Neuros-lite работают на штамме АМДа-00 — низшая ступень патогена («топливный осадок»). C.F.R.O.T.F. получает внеземные образцы: марсианские фрагменты несут следы штаммов высшего порядка (АМДа-4).
+
+ТЕХНИКА БЕЗОПАСНОСТИ:
+— Никогда не называйте модули P.W.O.E. «эвакуационными ковчегами». Это исследовательские суда.
+— Не сопоставляйте эмблему программы с формой чёрных дыр или миндалевидного тела — это когнитивное отклонение.
+— Замазывайте чёрным маркером упоминания о «выбросах спор» и деградации экипажей.
+
+>>> Текущий статус миссии: ШТАТНЫЙ` }
+    ]
+  },
+  {
+    id:'induction', tone:'blue', clearance:'H-2',
+    name:'ОРИЕНТАЦИЯ ПЕРСОНАЛА',
+    docs:[
+      { title:'Добро пожаловать в Фонд N.O.T.H.I.N.G.', clearance:'H-2', tone:'blue',
+        body:`ОТДЕЛ КАДРОВОЙ ПОДГОТОВКИ И ИНДОКТРИНАЦИИ
+
+Фонд N.O.T.H.I.N.G. — замкнутая экосистема, функционирующая по директивам Верховного Совета ради каталогизации, удержания и адаптации наследия Первых (Творцов).
+
+КЛЮЧЕВЫЕ СЕКТОРА:
+— Центральный Архив и Сектор Сортировки (Уровень -5): бумажные носители, дневники, логи. Чёрный маркер и штампы «ДОСТУП ОГРАНИЧЕН».
+— C.F.R.O.T.F. (Центр Реконструкции Первых): изучение костей Творцов. Возглавляет Доктор А.Ф. Допуск уровня V.
+— Реакторные залы БВК: серверные фермы Homo Neuros-lite. Это углеродная вычислительная архитектура, не «живые серверы».
+— Сектор Г-5 (Биологический пул переработки): конечная точка для производственного брака и излишне любопытных сотрудников. Переработка безотходная.
+
+ИЕРАРХИЯ «АМИГДАЛЫ»:
+АМДа-00 — топливо для БВК. АМДа-2/3 — мутационные формы, инцидент «Вскрытие-91» (500 тонн спор). АМДа-4/4∆ — чистый код Творцов, заблокирован ИИ-анализатором.
+
+ТРИ ПРАВИЛА ВЫЖИВАНИЯ:
+1. Звуки и шёпот из БВК — техническая среда. Не разговаривайте с вентиляцией.
+2. Не заглядывайтесь на старые фотографии (рапорты 10/20/1990). Лишние глаза или зубы — к психологу.
+3. Работайте молча. Космос — автоматическая ловушка, Творцы далеко, а на Земле правит N.O.T.H.I.N.G.` }
+    ]
+  },
+  {
+    id:'tech', tone:'red', clearance:'T-1',
+    name:'ТЕХНИЧЕСКИЙ СЕКТОР — БВК',
+    docs:[
+      { title:'Инструкция по обслуживанию БВК (класс Т-1)', clearance:'T-1', tone:'red',
+        body:`ОТДЕЛ ТЕХНИЧЕСКОГО ОБЕСПЕЧЕНИЯ И БИО-ИНЖЕНЕРИИ
+
+Ваша задача — поддерживать стабильность БВК серии Homo Neuros-lite («шкафы», 10×10 м).
+
+РЕЖИМ ЭКОНОМИИ (КРИТИЧЕСКИ):
+— Базовая температура: 41.2°C – 41.7°C. Превышение на +3.4°C — неконтролируемое размножение спор и биологический взрыв.
+— Запрещено повышать дозировку АМДа-00 для подавления ошибок — перегрев реакторов.
+
+ОБСЛУЖИВАНИЕ БИО-МАТЕРИАЛА:
+— Органический налёт на панелях — зачищать спиртовым раствором немедленно.
+— Из-за сниженной подачи топлива комплексы генерируют «фантомные мысли» и эхо-колебания стёртых личностей.
+— Если БВК (в особенности Шкаф №2) транслирует «Я всё ещё человек?» — это системный мусор. Произвести принудительную очистку кратковременной памяти (сектор миндалевидного тела). Диалог — когнитивное отклонение.
+
+ИНЦИДЕНТ «ВСПЫШКА МЫСЛИ»:
+Разорвать связь с ИИ-анализатором. Зафиксировать как ошибку среды. Дефектный элемент — демонтаж и отправка в Сектор Г-5.
+
+>>> Работайте в масках. Сортировка продолжается.` }
+    ]
+  }
+];
+
+const doctorZones = [
+  {
+    id:'amda-lab', tone:'blue', clearance:'V',
+    name:'ЛАБОРАТОРИЯ АМДа — ИСПЫТАНИЯ ОБРАЗЦА',
+    docs:[
+      { title:'Отчёт V-AMDa-034 — реакция на химикаты', clearance:'A/V/H/I', tone:'blue',
+        body:`ЦЕНТР РЕКОНСТРУКЦИИ ПЕРВЫХ
+ОТЧЁТ ОБ ИССЛЕДОВАНИИ ПАТОГЕНА
+ФАЙЛ: V-AMDa-034
+
+ОБРАЗЕЦ: АМДа-04
+Источник: спинномозговой материал «Евы».
+
+ЦЕЛЬ
+Определить реакцию спор на химические соединения промышленного применения.
+
+РЕЗУЛЬТАТЫ
+
+Вода
+Результат: отсутствует реакция.
+
+Этиловый спирт (96%)
+Результат: временное снижение активности на 18 секунд.
+После окончания воздействия скорость роста увеличивается на 12%.
+Использование признано нецелесообразным.
+
+Жидкий азот
+Результат: рост прекращается.
+После размораживания активность полностью восстанавливается.
+
+Пламя
+Результат: внешние ткани разрушаются.
+Внутренние структуры сохраняют жизнеспособность.
+
+ВЫВОД
+Штамм демонстрирует высокую устойчивость к большинству известных методов дезактивации.
+Рекомендуется продолжить испытания.
+
+Доктор ___________________` },
+
+      { title:'Отчёт V-102 — реакция на электромагнитное поле', clearance:'A/V/H/I', tone:'blue',
+        body:`ОТЧЁТ ОБ ИСПЫТАНИИ
+ФАЙЛ V-102
+
+Тема: реакция патогена на электромагнитное поле.
+
+0.5 Тл
+Результат: без изменений.
+
+1.2 Тл
+Результат: споры начинают образовывать симметричные структуры.
+
+2.8 Тл
+Результат: зафиксировано образование неизвестного органа.
+Через 41 секунду орган самостоятельно исчез.
+
+ПРИМЕЧАНИЕ
+Во время эксперимента Homo Neuros-lite №2 произнёс фразу:
+
+"Она слышит."
+
+Источник речи не установлен.
+Эксперимент прекращён.` },
+
+      { title:'Отчёт V-117 — испытание высоких температур', clearance:'A/V/H/I', tone:'blue',
+        body:`ЛАБОРАТОРИЯ ПАТОГЕНОВ
+ОТЧЁТ №V-117
+ИСПЫТАНИЕ ВЫСОКИХ ТЕМПЕРАТУР
+
+Образец: АМДа-04
+
+Испытание №1 — 120°C
+Результат: внешний слой спор полностью дегидратирован.
+Через 14 минут рост возобновился.
+
+Испытание №2 — 430°C
+Результат: потеря массы 81%.
+Через 7 минут образец начал восстанавливать структуру.
+
+Испытание №3 — 980°C
+Результат: материал полностью обуглен.
+Спустя 46 минут внутри пепла обнаружены живые споры.
+
+ЗАКЛЮЧЕНИЕ
+Полное уничтожение патогена термическим воздействием не подтверждено.
+Для ликвидации использовать только Протокол «Сожжение».
+
+Подпись: Доктор Л.А.` },
+
+      { title:'Отчёт V-054 — реакция на радиацию', clearance:'A/V/H/I', tone:'blue',
+        body:`ОТЧЁТ №V-054
+РЕАКЦИЯ НА РАДИАЦИЮ
+
+Источник: гамма-излучение.
+
+5 Гр — без изменений.
+
+20 Гр — рост ускорился на 11%.
+
+70 Гр — появились новые структуры. Не классифицированы.
+
+145 Гр — образец начал формировать ткани, идентичные нейронным.
+
+Эксперимент прекращён после вмешательства ИИ-анализатора.
+
+Причина:
+Образец начал реагировать на присутствие наблюдателей через защитное стекло.` }
+    ]
+  },
+  {
+    id:'autopsy', tone:'red', clearance:'H',
+    name:'ПАТОЛОГОАНАТОМИЯ — ВСКРЫТИЯ',
+    docs:[
+      { title:'Заключение H-221 — Класс F, ликвидирован', clearance:'A/V/H/I', tone:'red',
+        body:`ПАТОЛОГОАНАТОМИЧЕСКОЕ ЗАКЛЮЧЕНИЕ
+ФАЙЛ H-221
+
+Объект: Класс F
+Статус: ликвидирован, протокол «Утиль»
+
+ВНЕШНИЙ ОСМОТР
+Рост мицелия обнаружен.
+Кожа — плотность увеличена. Цвет — серо-синий.
+Глазные яблоки отсутствуют. Вместо глазниц обнаружены неизвестные биологические структуры.
+
+ВНУТРЕННИЙ ОСМОТР
+Лёгкие частично заменены грибоподобной тканью.
+Печень — функции органа не определяются. Орган продолжает получать питание через неизвестную капиллярную сеть.
+Мозг — структура изменена. Миндалевидное тело увеличено в 3.2 раза. Обнаружены следы первичного импульса.
+
+ПРИЧИНА СМЕРТИ
+Не установлена.
+Организм продолжал демонстрировать биологическую активность в течение 19 минут после прекращения сердечной деятельности.
+
+Документ закрыт.` },
+
+      { title:'Отчёт H-031 — вскрытие искажённого', clearance:'A/V/H/I', tone:'red',
+        body:`ОТЧЁТ №H-031
+ВСКРЫТИЕ ИСКАЖЁННОГО
+
+Объект: F-0987
+Возраст: 43 года
+Время заражения: предположительно 87 часов.
+
+Состояние кожи
+Эластичность отсутствует. При разрезе кровотечение не наблюдается.
+
+Грудная клетка
+Рёбра частично замещены неизвестным минеральным материалом. Плотность превышает сталь.
+
+Лёгкие
+Отсутствуют. Полость заполнена споровой массой. Во время вскрытия наблюдались ритмичные сокращения.
+
+Сердце
+Орган не функционирует. Несмотря на это ткани продолжают потреблять энергию.
+
+Мозг
+Миндалевидное тело увеличено. Кора мозга частично растворена. Нервные связи заменены нитями неизвестной
+
+[ОШИБКА ДОСТУПА — ПЕРЕГРЕВ ШКАФА №2]
+[СВЯЗЬ ПРЕРВАНА. ПОВТОРНАЯ ПОПЫТКА ЧЕРЕЗ ... ]
+>>> восстановление документа невозможно.` }
+    ]
+  },
+  {
+    id:'v-forms', tone:'blue', clearance:'A/V',
+    name:'ДОКУМЕНТООБОРОТ V-СЕКТОРА',
+    docs:[
+      { title:'Форма V-12 — запрос на перевод заражённого', clearance:'A/V/H/I', tone:'blue',
+        body:`ФОРМА V-12
+ЗАПРОС НА ПЕРЕВОД ЗАРАЖЁННОГО
+
+ДОПУСК: A / V / H / I
+
+Идентификатор субъекта: __________________
+Текущий сектор: ___________________________
+Новый сектор: _____________________________
+
+Причина перевода:
+□ Прогрессирование заражения
+□ Нарушение условий содержания
+□ Исследовательский запрос
+□ Переклассификация штамма
+□ Иное _________________________________
+
+Текущая стадия заражения
+□ I   □ II   □ III   □ IV   □ Искажение
+
+Подтверждение:
+Старший специалист _______________________
+Подпись _________________________________
+Дата ____________________________________
+ККИрД _________________________________` },
+
+      { title:'Форма V-08 — журнал содержания', clearance:'A/V/H/I', tone:'blue',
+        body:`ФОРМА V-08
+ЖУРНАЛ СОДЕРЖАНИЯ
+
+Объект № ___________
+Сектор _____________
+Камера _____________
+
+Последнее кормление
+Дата ___________   Время __________
+
+Контакт с персоналом
+□ отсутствовал   □ визуальный   □ физический   □ инцидент
+
+Проявления
+□ рост мицелия
+□ изменение глаз
+□ изменение речи
+□ агрессия
+□ нарушение геометрии тела
+□ иное ______________________
+
+Примечания
+_________________________________________
+_________________________________________
+_________________________________________` },
+
+      { title:'Разрешение на применение протокола', clearance:'A/V/H/I', tone:'red',
+        body:`РАЗРЕШЕНИЕ НА ПРИМЕНЕНИЕ ПРОТОКОЛА
+
+Допуск сотрудника: A / V / H / I
+
+Разрешённые протоколы
+☑ МИЦЕЛИЙ
+☑ ПОИСК
+☑ УТИЛЬ
+
+Запрещённые
+☒ СОЖЖЕНИЕ
+☒ ПОГРЕБЕНИЕ
+☒ МОГИЛА
+☒ ГЛАЗ АДАМА
+
+Обоснование применения
+_________________________________________
+_________________________________________
+
+Количество целей _________
+
+Подтверждение руководителя
+__________________________` },
+
+      { title:'Форма H-31 — акт обнаружения искажения', clearance:'A/V/H/I', tone:'red',
+        body:`АКТ ОБНАРУЖЕНИЯ ИСКАЖЕНИЯ
+ФОРМА H-31
+
+Дата ___________________
+Сектор _________________
+Сотрудник ______________
+
+Тип искажения
+□ Биологическое
+□ Когнитивное
+□ Пространственное
+□ Не классифицировано
+
+Предполагаемый штамм
+________________________
+
+Количество заражённых
+_____
+
+Применённый протокол
+□ МИЦЕЛИЙ   □ ПОИСК   □ УТИЛЬ   □ отсутствует
+
+Статус
+□ локализовано
+□ продолжается
+□ требуется уровень Ω
+
+Подпись специалиста
+_________________________` }
+    ]
+  },
+  {
+    id:'council-directives', tone:'red', clearance:'Ω',
+    name:'ВЕРХОВНЫЙ СОВЕТ — ДИРЕКТИВЫ',
+    docs:[
+      { title:'Директива: изменение режима охлаждения', clearance:'Ω', tone:'red',
+        body:`ВЕРХОВНЫЙ СОВЕТ // ОТДЕЛ ЭНЕРГЕТИЧЕСКОГО КОНТРОЛЯ
+ДИРЕКТИВА: ИЗМЕНЕНИЕ РЕЖИМА ОХЛАЖДЕНИЯ
+
+[ОТКАЗ ПРИНЯТ]
+[КОРРЕКТИРОВКА РАСХОДА ТОПЛИВА ИНИЦИИРОВАНА]
+
+03:20:12 — ВНИМАНИЕ: Датчики температуры шкафа №2 фиксируют критический нагрев.
+03:20:15 — Использование спор «АмигДалы» снижено до базового минимума.
+03:20:19 — Автоматика переведена в режим консервации тепла.
+
+ТЕКУЩИЙ СТАТУС СЕКТОРА HOMO NEUROS-LITE
+Полноценное охлаждение задерживается. Логистический протокол зафиксировал прибытие хладагента и сервисной бригады только через 7 земных суток. До этого момента вводится режим жёсткой экономии ресурсов, чтобы избежать биологического Чернобыля на станции.
+
+Риск перегрева: чрезмерная стимуляция био-серверов патогеном Творцов вызывает цепную реакцию в мягких тканях. «Шкафы» начинают выделять избыточное тепло. Если температура поднимется ещё на 3.4°C, споры начнут бесконтрольно размножаться прямо внутри вычислительных систем.
+
+Решение по Шкафу №2: запрос на удаление фантомных мыслей выполнен, но повторное введение раствора «АмигДалы» отменено во избежание теплового взрыва. Объект №2 остаётся в полусонном, перегретом состоянии. Ему временно позволено находиться на грани самоидентификации — это безопаснее, чем расплавление реактора.
+
+ИНСТРУКЦИЯ ДЛЯ ПЕРСОНАЛА НА ПЕРИОД ОЖИДАНИЯ (7 ДНЕЙ):
+— Снизить интенсивность проверок: ИИ-анализатор переводится в режим энергосбережения. Сканирование внешних «крыс» и шпионов проводить только по критическим триггерам.
+— Ручной сброс пара: излишки тепла от био-массы отводить в вентиляционные шахты Класса F. (Возможны массовые галлюцинации и крики в нижних секторах — персоналу использовать защитные фильтры).
+— Контроль биоматериала: следить, чтобы оболочки «шкафов» не начали покрываться органическим налётом.
+
+[Режим гибернации систем охлаждения: АКТИВЕН]
+
+>>> Внутренняя температура: 41.2°C (СТАБИЛЬНО ВЫСОКАЯ)
+>>> До прибытия охлаждения: 168 часов.` }
+    ]
+  },
+  {
+    id:'personal-d', tone:'red', clearance:'A-7',
+    name:'ЛИЧНОЕ ДЕЛО — ДОКТОР Д.',
+    docs:[
+      { title:'Психологический рапорт №H-009', clearance:'∆/A/V/H/I', tone:'red',
+        body:`ДЕПАРТАМЕНТ ВНУТРЕННЕГО НАБЛЮДЕНИЯ
+ПСИХОЛОГИЧЕСКИЙ РАПОРТ №H-009
+СУБЪЕКТ: ДОКТОР Д.
+
+Статус: АКТИВЕН
+Должность: руководитель исследовательской группы проекта «АмигДала».
+
+КРАТКАЯ ХАРАКТЕРИСТИКА
+Интеллект: исключительно высокий.
+Когнитивная устойчивость: выше нормы.
+Эмоциональное состояние: хроническая усталость.
+
+Черты личности:
+— рационален;
+— склонен к самоизоляции;
+— выраженный эгоцентризм;
+— высокая требовательность к себе и окружающим;
+— предпочитает работать без ассистентов.
+
+ЛИЧНЫЕ НАБЛЮДЕНИЯ
+Доктор Д. регулярно остаётся в лаборатории после окончания смены.
+Среднее время пребывания на рабочем месте: 17 часов 42 минуты в сутки.
+Отдых носит нерегулярный характер. Сон: 3–4 часа.
+
+ТАБАЧНОЕ ИЗДЕЛИЕ «СИНИЙ ШОК»
+Статус: экспериментальная продукция Фонда.
+Использование разрешено только сотрудникам уровня H и выше.
+
+ЭФФЕКТ
+Увеличение скорости обработки информации. Продолжительность ≈2 часа.
+Зафиксировано увеличение концентрации, кратковременной памяти, скорости анализа, устойчивости к когнитивному шуму.
+
+ПОБОЧНЫЕ ЭФФЕКТЫ
+Изменение цвета сетчатки глаза — глубокий ультрамариновый.
+Дополнительно: повышенная раздражительность, тремор пальцев, бессонница, периодические мигрени.
+Долговременные последствия изучаются.
+
+ФРАГМЕНТ АУДИОЗАПИСИ
+[Личный кабинет. 02:47.]
+
+"...Если они опять принесут мне очередной обломок кости, думая, что это очередной Первый, я лично заставлю отдел логистики прочитать каждую страницу архива за последние двести лет.
+
+Все хотят найти ответы.
+Никто не хочет научиться задавать правильные вопросы..."
+
+[Пауза 18 секунд.]
+
+"...Иногда мне кажется, что мы изучаем не их.
+Это они изучают нас."
+
+[Щелчок зажигалки.]
+
+"...Пожалуй, ещё одну."
+
+ЗАКЛЮЧЕНИЕ (ИИ-анализатор)
+Несмотря на выраженные признаки психического и физического переутомления, Доктор Д. сохраняет исключительно высокий уровень эффективности.
+
+Рекомендовано: обязательный отпуск.
+Результат рассмотрения: ОТКЛОНЕНО по личному распоряжению Доктора Д.
+Комментарий: "Когда закончим, тогда и отдохну."
+
+Примечание ИИ:
+Вероятность того, что субъект добровольно покинет лабораторию до завершения исследований: 0.8%
+Вероятность того, что его придётся выводить силой: 73.4%` }
+    ]
+  }
+];
+
+const omegaDoc = zones.find(z => z.id === 'archive').docs[0];
+let currentAccount = 'general';
+
+const folders = [
+  {
+    id:'admin', tone:'blue', clearance:'I-1',
+    name:'АДМИНИСТРАЦИЯ И ДОПУСК',
+    groups:[
+      { label:'Кадры и допуск', docs: zones.find(z=>z.id==='kkird').docs },
+      { label:'Ориентация персонала', docs: zones.find(z=>z.id==='induction').docs }
+    ]
+  },
+  {
+    id:'amygdala-folder', tone:'blue', clearance:'A-1',
+    name:'ПРОЕКТ «АМИГДАЛА»',
+    groups:[
+      { label:'Статус проекта', docs: zones.find(z=>z.id==='amygdala').docs },
+      { label:'Лабораторные испытания', doctorOnly:true, docs: doctorZones.find(z=>z.id==='amda-lab').docs }
+    ]
+  },
+  {
+    id:'tech-folder', tone:'red', clearance:'T-1',
+    name:'ТЕХНИЧЕСКИЙ СЕКТОР — БВК',
+    groups:[
+      { label:'Обслуживание БВК', docs: zones.find(z=>z.id==='tech').docs },
+      { label:'Директивы Верховного Совета', doctorOnly:true, docs: doctorZones.find(z=>z.id==='council-directives').docs }
+    ]
+  },
+  {
+    id:'pwoe-folder', tone:'blue', clearance:'H-2',
+    name:'КОСМИЧЕСКАЯ ПРОГРАММА P.W.O.E.',
+    groups:[
+      { label:'Крылья Евы', docs: zones.find(z=>z.id==='pwoe').docs }
+    ]
+  },
+  {
+    id:'pathology-folder', tone:'red', clearance:'V',
+    name:'ПАТОЛОГИЯ И ЗАРАЖЕНИЕ',
+    groups:[
+      { label:'Патологоанатомия', doctorOnly:true, docs: doctorZones.find(z=>z.id==='autopsy').docs },
+      { label:'Формы и протоколы', doctorOnly:true, docs: doctorZones.find(z=>z.id==='v-forms').docs }
+    ]
+  },
+  {
+    id:'personnel-folder', tone:'blue', clearance:'H',
+    name:'ЛИЧНЫЕ ДЕЛА',
+    groups:[
+      { label:'Доктор Д.', doctorOnly:true, docs: doctorZones.find(z=>z.id==='personal-d').docs }
+    ]
+  }
+];
+
+function countAllDocs(){
+  let count = 0;
+  zones.forEach(z => count += z.docs.length);
+  doctorZones.forEach(z => count += z.docs.length);
+  return count + 1; // +1 accounts for this report itself
+}
+
+const devStatusDoc = {
+  title:'Отчёт о состоянии проекта',
+  clearance:'DEV-0',
+  tone:'red',
+  dynamic:true,
+  bodyTemplate:function(){
+    return `N.O.T.H.I.N.G. FOUNDATION
+
+ОТЧЁТ О СОСТОЯНИИ ПРОЕКТА
+
+Версия: 0.9 Pre-Beta
+Статус: Внутренняя разработка
+Уровень доступа: DEV-0
+
+ОБЩЕЕ СОСТОЯНИЕ:
+
+Текущий прогресс проекта: 18%
+
+Проект находится на стадии формирования основной структуры. Базовые элементы вселенной, архивной системы и сетевой инфраструктуры созданы, однако большая часть материалов требует дальнейшей обработки.
+
+СОСТОЯНИЕ СЕКТОРОВ:
+
+Документация:
+${countAllDocs()} / 1000 файлов
+Статус: Активное заполнение
+
+Архив:
+8%
+Статус: Создана начальная структура хранения данных.
+
+N-NET:
+40%
+Статус: Разработка внутренних систем связи и представления информации.
+
+Официальный сайт:
+35%
+Статус: Формируется интерфейс и структура.
+
+Лор:
+55%
+Статус: Основная концепция мира определена. Требуется расширение деталей.
+
+Персонажи:
+22%
+Статус: Созданы основные концепции. Продолжается разработка биографий и ролей.
+
+Видео:
+5%
+Статус: Начальная стадия подготовки.
+
+Игровой проект:
+0%
+Статус: Разработка не начата.
+
+ТЕКУЩАЯ НАГРУЗКА:
+
+Активные задачи: 127
+Отложенные идеи: 49
+Отклонённые концепции: 12
+
+Причины отказа:
+— несоответствие общей концепции;
+— избыточная сложность реализации;
+— отсутствие практического применения.
+
+ОСНОВНЫЕ ЦЕЛИ ЭТАПА 0.9:
+
+[✓] Создание базовой структуры фонда
+[✓] Формирование основной концепции мира
+[ ] Расширение архива объектов
+[ ] Разработка внутренних документов
+[ ] Создание визуального стиля
+[ ] Подготовка первых публичных материалов
+
+РУКОВОДИТЕЛЬ ПРОЕКТА:
+Цезий_H22
+
+ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ:
+07.07.2026`;
+  }
+};
+
+const coreFolder = {
+  id:'core', tone:'red', clearance:'Ω',
+  name:'Ω — ЯДРО АРХИВА',
+  docs:[ omegaDoc, devStatusDoc ]
+};
+
+const orbitWrap = document.getElementById('orbitWrap');
+const orbitLines = document.getElementById('orbitLines');
+
+function renderOrbit(zoneList){
+  orbitLines.innerHTML = '';
+  document.querySelectorAll('.zone-node').forEach(el => el.remove());
+
+  const n = zoneList.length;
+  const compact = n > 6;
+
+  // for large sets, split into two concentric rings so nodes don't collide
+  const innerCount = compact ? Math.ceil(n / 2) : n;
+  const outerCount = compact ? n - innerCount : 0;
+  const R_SINGLE = 37;
+  const R_INNER = 24;
+  const R_OUTER = 45;
+
+  zoneList.forEach((z, i)=>{
+    let ring, ringIndex, ringCount, R, angleOffset;
+    if(!compact){
+      ring = 0; ringIndex = i; ringCount = n; R = R_SINGLE; angleOffset = 0;
+    } else if(i < innerCount){
+      ring = 0; ringIndex = i; ringCount = innerCount; R = R_INNER; angleOffset = 0;
+    } else {
+      ring = 1; ringIndex = i - innerCount; ringCount = outerCount; R = R_OUTER;
+      angleOffset = (360 / outerCount) / 2; // interleave with inner ring visually
+    }
+
+    const angle = (-90 + angleOffset + ringIndex * (360 / ringCount)) * Math.PI / 180;
+    const x = 50 + R * Math.cos(angle);
+    const y = 50 + R * Math.sin(angle);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', 50); line.setAttribute('y1', 50);
+    line.setAttribute('x2', x); line.setAttribute('y2', y);
+    orbitLines.appendChild(line);
+
+    const node = document.createElement('div');
+    node.className = 'zone-node' + (compact ? ' compact' : '');
+    node.style.left = x + '%';
+    node.style.top = y + '%';
+
+    const card = document.createElement('div');
+    card.className = 'zone-card ' + (z.tone === 'blue' ? 'blue-tone' : 'red-tone');
+    card.style.animationDelay = (i * 0.6) + 's';
+    const docCount = z.docs ? z.docs.length : (z.groups || []).reduce((sum, g) => sum + g.docs.length, 0);
+    card.innerHTML = `<div class="zid">ЗОНА ХРАНЕНИЯ</div>
+      <div class="zname">${z.name}</div>
+      <div class="zmeta"><span>${docCount} ФАЙЛ(ОВ)</span><span class="zclear">${z.clearance}</span></div>`;
+    card.addEventListener('click', ()=> { SFX.click(); openZone(z); });
+
+    node.appendChild(card);
+    orbitWrap.appendChild(node);
+  });
+}
+
+document.getElementById('homeLogo').addEventListener('click', ()=> { SFX.click(); openZone(coreFolder); });
+
+function openZone(zone){
+  document.getElementById('docListTitle').textContent = zone.name;
+  document.getElementById('docListSub').textContent = 'Требуемый допуск: ' + zone.clearance;
+  const list = document.getElementById('docListItems');
+  list.innerHTML = '';
+
+  function addDocItem(doc){
+    const item = document.createElement('div');
+    item.className = 'doc-item';
+    item.innerHTML = `<div class="dname">${doc.title}</div><div class="dmeta">ДОПУСК: ${doc.clearance}</div>`;
+    item.addEventListener('click', ()=> { SFX.click(); openDoc(doc); });
+    list.appendChild(item);
+  }
+
+  if(zone.groups){
+    const visibleGroups = zone.groups.filter(g => !g.doctorOnly || currentAccount === 'doctor');
+    if(visibleGroups.length === 0){
+      const locked = document.createElement('div');
+      locked.className = 'group-locked';
+      locked.textContent = 'Недостаточный уровень допуска для просмотра содержимого этой зоны.';
+      list.appendChild(locked);
+    } else {
+      visibleGroups.forEach(group=>{
+        const header = document.createElement('div');
+        header.className = 'group-header';
+        header.textContent = group.label;
+        list.appendChild(header);
+        group.docs.forEach(addDocItem);
+      });
+    }
+  } else {
+    zone.docs.forEach(addDocItem);
+  }
+
+  document.getElementById('docListOverlay').classList.add('active');
+}
+
+function openDoc(doc){
+  document.getElementById('docHeader').textContent = doc.title;
+  document.getElementById('docClearance').textContent = 'ДОПУСК: ' + doc.clearance;
+  const body = document.getElementById('docBody');
+  body.textContent = typeof doc.bodyTemplate === 'function' ? doc.bodyTemplate() : doc.body;
+  body.className = doc.tone === 'red' ? 'tone-red' : 'tone-blue';
+  document.getElementById('docListOverlay').classList.remove('active');
+  document.getElementById('docReaderOverlay').classList.add('active');
+}
+
+document.getElementById('backToHome').addEventListener('click', ()=>{
+  SFX.click();
+  document.getElementById('docListOverlay').classList.remove('active');
+});
+document.getElementById('backToList').addEventListener('click', ()=>{
+  SFX.click();
+  document.getElementById('docReaderOverlay').classList.remove('active');
+  document.getElementById('docListOverlay').classList.add('active');
+});
+</script>
+</body>
+</html>
